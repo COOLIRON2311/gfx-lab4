@@ -98,7 +98,6 @@ class Polygon:
 class App(tk.Tk):
     W: int = 1000
     H: int = 600
-    R: int = 5
     mode: str
     points: list[Point]
     line_buffer: list[Point]
@@ -176,7 +175,25 @@ class App(tk.Tk):
         self.bind("<MouseWheel>", self.select_figure)
         self.bind("<Button-2>", self.swap_shape_type)
         self.bind("<BackSpace>", self.delete_shape)
+        self.bind("<F1>", self.debug)
         self.mainloop()
+
+    def debug(self, *args):
+        print(*args)
+        print(f"Points: {self.points}")
+        print(f"Lines: {self.lines}")
+        print(f"Polygons: {self.polygons}")
+        print(f"Line buffer: {self.line_buffer}")
+        print(f"Polygon buffer: {self.polygon_buffer}")
+        print(f"Selected shape: {self.selected_shape}")
+        print(f"Mode: {self.mode}")
+        print(f"Shape type: {self.shape_type}")
+        print(f"Spec func idx: {self._spec_func_idx}")
+        print(f"Point sel idx: {self._point_sel_idx}")
+        print(f"Line sel idx: {self._line_sel_idx}")
+        print(f"Polygon sel idx: {self._polygon_sel_idx}")
+        print(f"Shape type idx: {self._shape_type_idx}")
+        print()
 
     def scroll(self, *args):
         d = int(args[1])
@@ -194,9 +211,12 @@ class App(tk.Tk):
         self.line_buffer = []
         self.polygon_buffer = []
 
-    def redraw(self, *_):
+    def redraw(self, *_, delete_points=True):
         self.canvas.delete("all")
-        self.points = []
+        if delete_points:
+            self.points = []
+        for point in self.points:
+            point.draw(self.canvas)
         for line in self.lines:
             line.draw(self.canvas)
         for polygon in self.polygons:
@@ -252,7 +272,7 @@ class App(tk.Tk):
             elif isinstance(self.selected_shape, Polygon):
                 self.polygons.remove(self.selected_shape)
             self.selected_shape = None
-            self.redraw()
+            self.redraw(delete_points=False)
 
     def select_figure(self, event: tk.Event):
         if self.mode == Mode.SelectShape:
@@ -308,9 +328,9 @@ class App(tk.Tk):
     def in_point(self, p: Point, x: int, y: int) -> bool:
         return (x - p.x) ** 2 + (y - p.y) ** 2 <= self.R ** 2
 
-    def highlight_point(self, p: Point, timeout: int = 200):
-        highlight = self.canvas.create_oval(p.x - self.R, p.y - self.R, p.x + self.R,
-                                            p.y + self.R, fill="red", outline="red")
+    def highlight_point(self, p: Point, timeout: int = 200, r: int = 5):
+        highlight = self.canvas.create_oval(p.x - r, p.y - r, p.x + r,
+                                            p.y + r, fill="red", outline="red")
         self.canvas.after(timeout, self.canvas.delete, highlight)
 
     def highlight_line(self, line: Line, timeout: int = 200):
