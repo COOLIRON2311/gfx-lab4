@@ -20,9 +20,9 @@ class Mode(Enum):
 
 
 class ShapeType(Enum):
-    # Point = 1  # точка
-    Line = 0  # линия
-    Polygon = 1  # полигон
+    Point = 0  # точка
+    Line = 1  # линия
+    Polygon = 2  # полигон
 
     def __str__(self) -> str:
         return super().__str__().split(".")[-1]
@@ -108,9 +108,10 @@ class App(tk.Tk):
     shape_type: ShapeType
     selected_shape = None
     _spec_func_idx: int = 0
+    _point_sel_idx: int = 0
     _line_sel_idx: int = 0
     _polygon_sel_idx: int = 0
-    _shape_type_idx: int = 0
+    _shape_type_idx: int = 1
 
     def __init__(self):
         super().__init__()
@@ -171,9 +172,10 @@ class App(tk.Tk):
         self.canvas.bind("<Button-1>", self.click)
         self.bind("<Escape>", self.reset)
         self.bind("<Return>", self.redraw)
-        self.bind("<BackSpace>", self.clear_buffs)
+        self.bind("<Delete>", self.clear_buffs)
         self.bind("<MouseWheel>", self.select_figure)
         self.bind("<Button-2>", self.swap_shape_type)
+        self.bind("<BackSpace>", self.delete_shape)
         self.mainloop()
 
     def scroll(self, *args):
@@ -241,26 +243,47 @@ class App(tk.Tk):
         self.label2.config(text=f"Mode: {self.mode}")
         ...
 
+    def delete_shape(self, _):
+        if self.selected_shape:
+            if isinstance(self.selected_shape, Point):
+                self.points.remove(self.selected_shape)
+            if isinstance(self.selected_shape, Line):
+                self.lines.remove(self.selected_shape)
+            elif isinstance(self.selected_shape, Polygon):
+                self.polygons.remove(self.selected_shape)
+            self.selected_shape = None
+            self.redraw()
+
     def select_figure(self, event: tk.Event):
         if self.mode == Mode.SelectShape:
-            if self.shape_type == ShapeType.Line:
-                if len(self.lines) > 0:
-                    if event.delta > 0:
-                        self._line_sel_idx += 1
-                    else:
-                        self._line_sel_idx -= 1
-                    self._line_sel_idx %= len(self.lines)
-                    self.selected_shape = self.lines[self._line_sel_idx]
-                    self.highlight_line(self.selected_shape)
-            elif self.shape_type == ShapeType.Polygon:
-                if len(self.polygons) > 0:
-                    if event.delta > 0:
-                        self._polygon_sel_idx += 1
-                    else:
-                        self._polygon_sel_idx -= 1
-                    self._polygon_sel_idx %= len(self.polygons)
-                    self.selected_shape = self.polygons[self._polygon_sel_idx]
-                    self.highlight_polygon(self.selected_shape)
+            match self.shape_type:
+                case ShapeType.Point:
+                    if len(self.points) > 0:
+                        if event.delta > 0:
+                            self._point_sel_idx += 1
+                        else:
+                            self._point_sel_idx -= 1
+                        self._point_sel_idx %= len(self.points)
+                        self.selected_shape = self.points[self._point_sel_idx]
+                        self.highlight_point(self.selected_shape)
+                case ShapeType.Line:
+                    if len(self.lines) > 0:
+                        if event.delta > 0:
+                            self._line_sel_idx += 1
+                        else:
+                            self._line_sel_idx -= 1
+                        self._line_sel_idx %= len(self.lines)
+                        self.selected_shape = self.lines[self._line_sel_idx]
+                        self.highlight_line(self.selected_shape)
+                case ShapeType.Polygon:
+                    if len(self.polygons) > 0:
+                        if event.delta > 0:
+                            self._polygon_sel_idx += 1
+                        else:
+                            self._polygon_sel_idx -= 1
+                        self._polygon_sel_idx %= len(self.polygons)
+                        self.selected_shape = self.polygons[self._polygon_sel_idx]
+                        self.highlight_polygon(self.selected_shape)
 
     def apply_spec_func(self):
         func = SpecialFunctions(self._spec_func_idx)
