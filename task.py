@@ -19,6 +19,15 @@ class Mode(Enum):
         return super().__str__().split(".")[-1]
 
 
+class ShapeType(Enum):
+    # Point = 1  # точка
+    Line = 0  # линия
+    Polygon = 1  # полигон
+
+    def __str__(self) -> str:
+        return super().__str__().split(".")[-1]
+
+
 class SpecialFunctions(Enum):
     None_ = 0
     PointInConvexPoly = 1
@@ -71,6 +80,7 @@ class Line:
 @dataclass
 class Polygon:
     lines: list[Line]
+    points: list[Point]
 
     def __init__(self, points) -> None:
         self.points = points
@@ -80,6 +90,9 @@ class Polygon:
     def draw(self, canvas: tk.Canvas, color: str = "black"):
         for line in self.lines:
             line.draw(canvas, color)
+
+    def points_list(self):
+        return [(p.x, p.y) for p in self.points]
 
 
 class App(tk.Tk):
@@ -92,8 +105,12 @@ class App(tk.Tk):
     lines: list[Line]
     polygon_buffer: list[Point]
     polygons: list[Polygon]
+    shape_type: ShapeType
     selected_shape = None
-    spec_func_idx: int = 0
+    _spec_func_idx: int = 0
+    _line_sel_idx: int = 0
+    _polygon_sel_idx: int = 0
+    _shape_type_idx: int = 0
 
     def __init__(self):
         super().__init__()
@@ -101,6 +118,7 @@ class App(tk.Tk):
         self.geometry(f"{self.W}x{self.H}")
         self.resizable(0, 0)
         self.mode = Mode.PointDraw
+        self.shape_type = ShapeType.Line
         self.points = []
         self.lines = []
         self.polygons = []
@@ -121,11 +139,12 @@ class App(tk.Tk):
         self.button6 = tk.Button(self.buttons, text="Line Draw", command=self.line_draw)
         self.button7 = tk.Button(self.buttons, text="Polygon Draw", command=self.polygon_draw)
         self.button8 = tk.Button(self.buttons, text="Reset", command=self.reset)
+        self.label1 = tk.Label(self.buttons, text=f"Shape: {self.shape_type}", bd=1, relief=tk.SUNKEN, anchor=tk.E)
         self.button9 = tk.Button(self.buttons, text="Select Shape", command=self.select_shape)
         self.button10 = tk.Button(self.buttons, text="Apply", command=self.apply_spec_func)
-        self.listbox = tk.Listbox(self.buttons, selectmode=tk.SINGLE, height=1, width=30)
+        self.listbox = tk.Listbox(self.buttons, selectmode=tk.SINGLE, height=1, width=28)
         self.scrollbar = tk.Scrollbar(self.buttons, orient=tk.VERTICAL)
-        self.status = tk.Label(self.buttons, text=f"Mode: {self.mode}", bd=1, relief=tk.SUNKEN, anchor=tk.E)
+        self.label2 = tk.Label(self.buttons, text=f"Mode: {self.mode}", bd=1, relief=tk.SUNKEN, anchor=tk.E)
         self.canvas.pack()
         self.canvas.config(cursor="cross")
         self.buttons.pack(side="bottom", fill="x")
@@ -137,7 +156,8 @@ class App(tk.Tk):
         self.button6.pack(side="left", fill="x")
         self.button7.pack(side="left", fill="x")
         self.button8.pack(side="left", fill="x")
-        self.status.pack(side="right", fill="x", padx=5)
+        self.label1.pack(side="left", fill="x", padx=5)
+        self.label2.pack(side="right", fill="x", padx=5)
         self.button10.pack(side="right", fill="x", padx=5)
         self.listbox.pack(side="right", fill="x")
         self.scrollbar.pack(side="right", fill="y")
@@ -152,18 +172,20 @@ class App(tk.Tk):
         self.bind("<Escape>", self.reset)
         self.bind("<Return>", self.redraw)
         self.bind("<BackSpace>", self.clear_buffs)
+        self.bind("<MouseWheel>", self.select_figure)
+        self.bind("<Button-2>", self.swap_shape_type)
         self.mainloop()
 
     def scroll(self, *args):
         d = int(args[1])
-        if 0 < self.spec_func_idx + d < len(SpecialFunctions):
-            self.spec_func_idx += d
+        if 0 < self._spec_func_idx + d < len(SpecialFunctions):
+            self._spec_func_idx += d
         self.listbox.yview(*args)
 
     def reset(self, *_):
         self.canvas.delete("all")
         self.mode = Mode.PointDraw
-        self.status.config(text=f"Mode: {self.mode}")
+        self.label2.config(text=f"Mode: {self.mode}")
         self.points = []
         self.polygons = []
         self.lines = []
@@ -184,43 +206,64 @@ class App(tk.Tk):
 
     def rotate(self):
         self.mode = Mode.Rotate
-        self.status.config(text=f"Mode: {self.mode}")
+        self.label2.config(text=f"Mode: {self.mode}")
         ...
 
     def scale(self):
         self.mode = Mode.Scale
-        self.status.config(text=f"Mode: {self.mode}")
+        self.label2.config(text=f"Mode: {self.mode}")
         ...
 
     def shear(self):
         self.mode = Mode.Shear
-        self.status.config(text=f"Mode: {self.mode}")
+        self.label2.config(text=f"Mode: {self.mode}")
         ...
 
     def translate(self):
         self.mode = Mode.Translate
-        self.status.config(text=f"Mode: {self.mode}")
+        self.label2.config(text=f"Mode: {self.mode}")
         ...
 
     def point_draw(self):
         self.mode = Mode.PointDraw
-        self.status.config(text=f"Mode: {self.mode}")
+        self.label2.config(text=f"Mode: {self.mode}")
 
     def line_draw(self):
         self.mode = Mode.LineDraw
-        self.status.config(text=f"Mode: {self.mode}")
+        self.label2.config(text=f"Mode: {self.mode}")
 
     def polygon_draw(self):
         self.mode = Mode.PolygonDraw
-        self.status.config(text=f"Mode: {self.mode}")
+        self.label2.config(text=f"Mode: {self.mode}")
 
     def select_shape(self):
         self.mode = Mode.SelectShape
-        self.status.config(text=f"Mode: {self.mode}")
+        self.label2.config(text=f"Mode: {self.mode}")
         ...
 
+    def select_figure(self, event: tk.Event):
+        if self.mode == Mode.SelectShape:
+            if self.shape_type == ShapeType.Line:
+                if len(self.lines) > 0:
+                    if event.delta > 0:
+                        self._line_sel_idx += 1
+                    else:
+                        self._line_sel_idx -= 1
+                    self._line_sel_idx %= len(self.lines)
+                    self.selected_shape = self.lines[self._line_sel_idx]
+                    self.highlight_line(self.selected_shape)
+            elif self.shape_type == ShapeType.Polygon:
+                if len(self.polygons) > 0:
+                    if event.delta > 0:
+                        self._polygon_sel_idx += 1
+                    else:
+                        self._polygon_sel_idx -= 1
+                    self._polygon_sel_idx %= len(self.polygons)
+                    self.selected_shape = self.polygons[self._polygon_sel_idx]
+                    self.highlight_polygon(self.selected_shape)
+
     def apply_spec_func(self):
-        func = SpecialFunctions(self.spec_func_idx)
+        func = SpecialFunctions(self._spec_func_idx)
 
         match func:
             case SpecialFunctions.None_:
@@ -237,7 +280,7 @@ class App(tk.Tk):
                 ...
 
         self.mode = Mode.SelectShape
-        self.status.config(text=f"Mode: {self.mode}")
+        self.label2.config(text=f"Mode: {self.mode}")
 
     def in_point(self, p: Point, x: int, y: int) -> bool:
         return (x - p.x) ** 2 + (y - p.y) ** 2 <= self.R ** 2
@@ -246,6 +289,20 @@ class App(tk.Tk):
         highlight = self.canvas.create_oval(p.x - self.R, p.y - self.R, p.x + self.R,
                                             p.y + self.R, fill="red", outline="red")
         self.canvas.after(timeout, self.canvas.delete, highlight)
+
+    def highlight_line(self, line: Line, timeout: int = 200):
+        highlight = self.canvas.create_line(line.p1.x, line.p1.y, line.p2.x, line.p2.y, fill="red")
+        self.canvas.after(timeout, self.canvas.delete, highlight)
+
+    def highlight_polygon(self, polygon: Polygon, timeout: int = 200):
+        highlight = self.canvas.create_polygon(polygon.points_list(), fill='', outline="red")
+        self.canvas.after(timeout, self.canvas.delete, highlight)
+
+    def swap_shape_type(self, _):
+        if self.mode == Mode.SelectShape:
+            self._shape_type_idx = (self._shape_type_idx + 1) % len(ShapeType)
+            self.shape_type = ShapeType(self._shape_type_idx)
+            self.label1.config(text=f"Shape: {self.shape_type}")
 
     def click(self, event: tk.Event):
         match self.mode:
