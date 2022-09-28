@@ -46,9 +46,9 @@ class Polygon:
     points: list[Point]
 
     def draw(self, canvas: tk.Canvas, color: str = "black"):
-        # TODO: Fix drawing last line
-        for i in range(len(self.points) - 1):
-            Line(self.points[i], self.points[i + 1]).draw(canvas, color)
+        ln = len(self.points)
+        for i in range(ln):
+            Line(self.points[i], self.points[(i + 1) % ln]).draw(canvas, color)
 
 
 class App(tk.Tk):
@@ -108,6 +108,7 @@ class App(tk.Tk):
         self.button5.pack(side="left", fill="x")
         self.button6.pack(side="left", fill="x")
         self.button7.pack(side="left", fill="x")
+        self.button8.pack(side="left", fill="x")
         self.status.pack(side="right", fill="x", padx=5)
         self.canvas.bind("<Button-1>", self.click)
         self.bind("<Escape>", self.reset)
@@ -154,6 +155,10 @@ class App(tk.Tk):
     def in_point(self, p: Point, x: int, y: int) -> bool:
         return (x - p.x) ** 2 + (y - p.y) ** 2 <= self.R ** 2
 
+    def highlight_point(self, p: Point, timeout: int = 200):
+        highlight = self.canvas.create_oval(p.x - self.R, p.y - self.R, p.x + self.R, p.y + self.R, fill="red", outline="red")
+        self.canvas.after(timeout, self.canvas.delete, highlight)
+
     def click(self, event: tk.Event):
         match self.mode:
             case Mode.PointDraw:
@@ -165,6 +170,7 @@ class App(tk.Tk):
                 for p in self.points:
                     if self.in_point(p, event.x, event.y):
                         self.line_buffer.append(p)
+                        self.highlight_point(p)
 
                 if len(self.line_buffer) == 2:
                     line = Line(self.line_buffer[0], self.line_buffer[1])
@@ -181,9 +187,9 @@ class App(tk.Tk):
                             self.polygon_buffer = []
                             polygon.draw(self.canvas)
                             self.polygons.append(polygon)
-                            print(polygon)
                         else:
                             self.polygon_buffer.append(p)
+                            self.highlight_point(p)
                         break
 
 
