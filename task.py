@@ -185,18 +185,22 @@ class App(tk.Tk):
     def rotate(self):
         self.mode = Mode.Rotate
         self.status.config(text=f"Mode: {self.mode}")
+        ...
 
     def scale(self):
         self.mode = Mode.Scale
         self.status.config(text=f"Mode: {self.mode}")
+        ...
 
     def shear(self):
         self.mode = Mode.Shear
         self.status.config(text=f"Mode: {self.mode}")
+        ...
 
     def translate(self):
         self.mode = Mode.Translate
         self.status.config(text=f"Mode: {self.mode}")
+        ...
 
     def point_draw(self):
         self.mode = Mode.PointDraw
@@ -213,6 +217,7 @@ class App(tk.Tk):
     def select_shape(self):
         self.mode = Mode.SelectShape
         self.status.config(text=f"Mode: {self.mode}")
+        ...
 
     def apply_spec_func(self):
         func = SpecialFunctions(self.spec_func_idx)
