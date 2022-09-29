@@ -2,6 +2,7 @@ import tkinter as tk
 from dataclasses import dataclass
 from enum import Enum
 import numpy as np
+from math import radians, sin, cos
 
 
 class Mode(Enum):
@@ -74,7 +75,7 @@ class Point:
         miny = min(p1.y, p2.y)
         return minx <= self.x <= maxx and miny <= self.y <= maxy
 
-    def apply_transform(self, transform: np.ndarray):
+    def transform(self, transform: np.ndarray):
         p = np.array([self.x, self.y, 1])
         p = np.matmul(transform, p)
         self.x = p[0]
@@ -93,9 +94,9 @@ class Line:
         """Проверка, что линия пересекает прямоугольник"""
         return all((self.p1.in_rect(p1, p2), self.p2.in_rect(p1, p2)))
 
-    def apply_transform(self, transform: np.ndarray):
-        self.p1.apply_transform(transform)
-        self.p2.apply_transform(transform)
+    def transform(self, transform: np.ndarray):
+        self.p1.transform(transform)
+        self.p2.transform(transform)
 
 
 @dataclass
@@ -119,11 +120,11 @@ class Polygon:
         """Проверка, что полигон пересекает прямоугольник"""
         return all(line.in_rect(p1, p2) for line in self.lines)
 
-    def apply_transform(self, transform: np.ndarray):
+    def transform(self, transform: np.ndarray):
         for point in self.points:
-            point.apply_transform(transform)
+            point.transform(transform)
         for line in self.lines:
-            line.apply_transform(transform)
+            line.transform(transform)
 
 
 class App(tk.Tk):
@@ -263,22 +264,62 @@ class App(tk.Tk):
         self.mode = Mode.Rotate
         self.label2.config(text=f"Mode: {self.mode}")
         if self.selected_shape is not None:
-            ...
+            phi = radians(float(input("Angle (degrees): ")))
+            mat = np.array([
+                [cos(phi), -sin(phi), 0],
+                [sin(phi), cos(phi), 0],
+                [0, 0, 1]])
+            self.selected_shape.transform(mat)
+            # TODO: relative to point
             self.redraw(delete_points=False)
+            self.after(1, self.focus_force)
 
     def scale(self):
         self.mode = Mode.Scale
         self.label2.config(text=f"Mode: {self.mode}")
+        if self.selected_shape is not None:
+            sx = float(input("Scale x: "))
+            sy = float(input("Scale y: "))
+            # possibly wrong matrix
+            mat = np.array([
+                [sx, 0, 0],
+                [0, sy, 0],
+                [0, 0, 1]])
+            self.selected_shape.transform(mat)
+            # TODO: relative to point
+            self.redraw(delete_points=False)
+            self.after(1, self.focus_force)
 
     def shear(self):
         self.mode = Mode.Shear
         self.label2.config(text=f"Mode: {self.mode}")
-        ...
+        if self.selected_shape is not None:
+            shx = float(input("Shear x: "))
+            shy = float(input("Shear y: "))
+            # possibly wrong matrix
+            mat = np.array([
+                [1, shx, 0],
+                [shy, 1, 0],
+                [0, 0, 1]])
+            self.selected_shape.transform(mat)
+            # TODO: relative to point
+            self.redraw(delete_points=False)
+            self.after(1, self.focus_force)
 
     def translate(self):
         self.mode = Mode.Translate
         self.label2.config(text=f"Mode: {self.mode}")
-        ...
+        if self.selected_shape is not None:
+            tx = float(input("Translate x: "))
+            ty = float(input("Translate y: "))
+            mat = np.array([
+                [1, 0, tx],
+                [0, 1, ty],
+                [0, 0, 1]])
+            self.selected_shape.transform(mat)
+            # TODO: relative to point
+            self.redraw(delete_points=False)
+            self.after(1, self.focus_force)
 
     def point_draw(self):
         self.mode = Mode.PointDraw
