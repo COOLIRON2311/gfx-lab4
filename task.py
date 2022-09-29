@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import tkinter as tk
+from dataclasses import dataclass
 from enum import Enum
 import numpy as np
 
@@ -74,6 +74,12 @@ class Point:
         miny = min(p1.y, p2.y)
         return minx <= self.x <= maxx and miny <= self.y <= maxy
 
+    def apply_transform(self, transform: np.ndarray):
+        p = np.array([self.x, self.y, 1])
+        p = np.matmul(transform, p)
+        self.x = p[0]
+        self.y = p[1]
+
 
 @dataclass
 class Line:
@@ -86,6 +92,10 @@ class Line:
     def in_rect(self, p1: Point, p2: Point) -> bool:
         """Проверка, что линия пересекает прямоугольник"""
         return all((self.p1.in_rect(p1, p2), self.p2.in_rect(p1, p2)))
+
+    def apply_transform(self, transform: np.ndarray):
+        self.p1.apply_transform(transform)
+        self.p2.apply_transform(transform)
 
 
 @dataclass
@@ -108,6 +118,12 @@ class Polygon:
     def in_rect(self, p1: Point, p2: Point) -> bool:
         """Проверка, что полигон пересекает прямоугольник"""
         return all(line.in_rect(p1, p2) for line in self.lines)
+
+    def apply_transform(self, transform: np.ndarray):
+        for point in self.points:
+            point.apply_transform(transform)
+        for line in self.lines:
+            line.apply_transform(transform)
 
 
 class App(tk.Tk):
@@ -246,12 +262,13 @@ class App(tk.Tk):
     def rotate(self):
         self.mode = Mode.Rotate
         self.label2.config(text=f"Mode: {self.mode}")
-        ...
+        if self.selected_shape is not None:
+            ...
+            self.redraw(delete_points=False)
 
     def scale(self):
         self.mode = Mode.Scale
         self.label2.config(text=f"Mode: {self.mode}")
-        ...
 
     def shear(self):
         self.mode = Mode.Shear
@@ -338,8 +355,8 @@ class App(tk.Tk):
                 self.rect_sel_p2 = Point(event.x, event.y)
                 self.redraw(delete_points=False)
                 self.canvas.create_rectangle(self.rect_sel_p1.x, self.rect_sel_p1.y,
-                                                         self.rect_sel_p2.x, self.rect_sel_p2.y,
-                                                         outline="red", dash=(4, 4))
+                                             self.rect_sel_p2.x, self.rect_sel_p2.y,
+                                             outline="red", dash=(4, 4))
             else:
                 self.rect_sel_p1 = Point(event.x, event.y)
                 self.rect_sel_p2 = None
