@@ -67,6 +67,13 @@ class Point:
             return self.x == __o.x and self.y == __o.y
         return False
 
+    def in_rect(self, p1: 'Point', p2: 'Point') -> bool:
+        maxx = max(p1.x, p2.x)
+        minx = min(p1.x, p2.x)
+        maxy = max(p1.y, p2.y)
+        miny = min(p1.y, p2.y)
+        return minx <= self.x <= maxx and miny <= self.y <= maxy
+
 
 @dataclass
 class Line:
@@ -75,6 +82,10 @@ class Line:
 
     def draw(self, canvas: tk.Canvas, color: str = "black"):
         canvas.create_line(self.p1.x, self.p1.y, self.p2.x, self.p2.y, fill=color)
+
+    def in_rect(self, p1: Point, p2: Point) -> bool:
+        """Проверка, что линия пересекает прямоугольник"""
+        return all((self.p1.in_rect(p1, p2), self.p2.in_rect(p1, p2)))
 
 
 @dataclass
@@ -94,10 +105,15 @@ class Polygon:
     def points_list(self):
         return [(p.x, p.y) for p in self.points]
 
+    def in_rect(self, p1: Point, p2: Point) -> bool:
+        """Проверка, что полигон пересекает прямоугольник"""
+        return all(line.in_rect(p1, p2) for line in self.lines)
+
 
 class App(tk.Tk):
     W: int = 1000
     H: int = 600
+    R: int = 5
     mode: str
     points: list[Point]
     line_buffer: list[Point]
@@ -107,10 +123,9 @@ class App(tk.Tk):
     shape_type: ShapeType
     selected_shape = None
     _spec_func_idx: int = 0
-    _point_sel_idx: int = 0
-    _line_sel_idx: int = 0
-    _polygon_sel_idx: int = 0
     _shape_type_idx: int = 1
+    rect_sel_p1: Point
+    rect_sel_p2: Point
 
     def __init__(self):
         super().__init__()
@@ -124,6 +139,8 @@ class App(tk.Tk):
         self.polygons = []
         self.line_buffer = []
         self.polygon_buffer = []
+        self.rect_sel_p1 = None
+        self.rect_sel_p2 = None
 
         self.create_widgets()
         self.mainloop()
@@ -172,10 +189,11 @@ class App(tk.Tk):
         self.bind("<Escape>", self.reset)
         self.bind("<Return>", self.redraw)
         self.bind("<Delete>", self.clear_buffs)
-        self.bind("<MouseWheel>", self.select_figure)
         self.bind("<Button-2>", self.swap_shape_type)
         self.bind("<BackSpace>", self.delete_shape)
         self.bind("<F1>", self.debug)
+        self.bind("<B1-Motion>", self.mouse_move)
+        self.bind("<ButtonRelease-1>", self.mouse_release)
         self.mainloop()
 
     def debug(self, *args):
@@ -189,10 +207,9 @@ class App(tk.Tk):
         print(f"Mode: {self.mode}")
         print(f"Shape type: {self.shape_type}")
         print(f"Spec func idx: {self._spec_func_idx}")
-        print(f"Point sel idx: {self._point_sel_idx}")
-        print(f"Line sel idx: {self._line_sel_idx}")
-        print(f"Polygon sel idx: {self._polygon_sel_idx}")
         print(f"Shape type idx: {self._shape_type_idx}")
+        print(f"Rect sel p1: {self.rect_sel_p1}")
+        print(f"Rect sel p2: {self.rect_sel_p2}")
         print()
 
     def scroll(self, *args):
@@ -261,7 +278,6 @@ class App(tk.Tk):
     def select_shape(self):
         self.mode = Mode.SelectShape
         self.label2.config(text=f"Mode: {self.mode}")
-        ...
 
     def delete_shape(self, _):
         if self.selected_shape:
@@ -273,37 +289,6 @@ class App(tk.Tk):
                 self.polygons.remove(self.selected_shape)
             self.selected_shape = None
             self.redraw(delete_points=False)
-
-    def select_figure(self, event: tk.Event):
-        if self.mode == Mode.SelectShape:
-            match self.shape_type:
-                case ShapeType.Point:
-                    if len(self.points) > 0:
-                        if event.delta > 0:
-                            self._point_sel_idx += 1
-                        else:
-                            self._point_sel_idx -= 1
-                        self._point_sel_idx %= len(self.points)
-                        self.selected_shape = self.points[self._point_sel_idx]
-                        self.highlight_point(self.selected_shape)
-                case ShapeType.Line:
-                    if len(self.lines) > 0:
-                        if event.delta > 0:
-                            self._line_sel_idx += 1
-                        else:
-                            self._line_sel_idx -= 1
-                        self._line_sel_idx %= len(self.lines)
-                        self.selected_shape = self.lines[self._line_sel_idx]
-                        self.highlight_line(self.selected_shape)
-                case ShapeType.Polygon:
-                    if len(self.polygons) > 0:
-                        if event.delta > 0:
-                            self._polygon_sel_idx += 1
-                        else:
-                            self._polygon_sel_idx -= 1
-                        self._polygon_sel_idx %= len(self.polygons)
-                        self.selected_shape = self.polygons[self._polygon_sel_idx]
-                        self.highlight_polygon(self.selected_shape)
 
     def apply_spec_func(self):
         func = SpecialFunctions(self._spec_func_idx)
@@ -346,6 +331,44 @@ class App(tk.Tk):
             self._shape_type_idx = (self._shape_type_idx + 1) % len(ShapeType)
             self.shape_type = ShapeType(self._shape_type_idx)
             self.label1.config(text=f"Shape: {self.shape_type}")
+
+    def mouse_move(self, event: tk.Event):
+        if self.mode == Mode.SelectShape:
+            if self.rect_sel_p1:
+                self.rect_sel_p2 = Point(event.x, event.y)
+                self.redraw(delete_points=False)
+                self.canvas.create_rectangle(self.rect_sel_p1.x, self.rect_sel_p1.y,
+                                                         self.rect_sel_p2.x, self.rect_sel_p2.y,
+                                                         outline="red", dash=(4, 4))
+            else:
+                self.rect_sel_p1 = Point(event.x, event.y)
+                self.rect_sel_p2 = None
+
+    def mouse_release(self, _: tk.Event):
+        if self.mode == Mode.SelectShape:
+            if self.rect_sel_p1 and self.rect_sel_p2:
+                self.redraw(delete_points=False)
+                match self.shape_type:
+                    case ShapeType.Point:
+                        for p in self.points:
+                            if p.in_rect(self.rect_sel_p1, self.rect_sel_p2):
+                                self.highlight_point(p)
+                                self.selected_shape = p
+                                break
+                    case ShapeType.Line:
+                        for line in self.lines:
+                            if line.in_rect(self.rect_sel_p1, self.rect_sel_p2):
+                                self.highlight_line(line)
+                                self.selected_shape = line
+                                break
+                    case ShapeType.Polygon:
+                        for polygon in self.polygons:
+                            if polygon.in_rect(self.rect_sel_p1, self.rect_sel_p2):
+                                self.highlight_polygon(polygon)
+                                self.selected_shape = polygon
+                                break
+                self.rect_sel_p1 = None
+                self.rect_sel_p2 = None
 
     def click(self, event: tk.Event):
         match self.mode:
