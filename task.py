@@ -305,27 +305,11 @@ class App(tk.Tk):
             if inp is None:
                 return
             phi = radians(inp)
-            # https://scask.ru/a_book_mm3d.php?id=45
             if self.tp is not None:
                 m, n = self.tp
             else:
                 m, n = self.selected_shape.center
-            # m1 = np.array([
-            #     [1, 0, m],
-            #     [0, 1, n],
-            #     [0, 0, 1]
-            # ])
-            # r = np.array([
-                # [cos(phi), -sin(phi), 0],
-                # [sin(phi), cos(phi), 0],
-                # [0, 0, 1]
-            # ])
-            # m2 = np.array([
-            #     [1, 0, -m],
-            #     [0, 1, -n],
-            #     [0, 0, 1]
-            # ])
-            # self.selected_shape.transform(m1 @ r @ m2)
+            # https://scask.ru/a_book_mm3d.php?id=45
             mat = np.array([
                 [cos(phi), -sin(phi), -m * cos(phi) + n * sin(phi) + m],
                 [sin(phi), cos(phi), -m * sin(phi) - n * cos(phi) + n],
