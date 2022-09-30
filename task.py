@@ -1,9 +1,10 @@
+from time import sleep
 import tkinter as tk
 from dataclasses import dataclass
 from enum import Enum
-import numpy as np
-from math import radians, sin, cos
+from math import cos, radians, sin
 from tkinter import simpledialog as sd
+import numpy as np
 
 
 class Mode(Enum):
@@ -82,6 +83,11 @@ class Point:
         self.x = p[0]
         self.y = p[1]
 
+    def highlight(self, canvas: tk.Canvas, timeout: int = 200, r: int = 5):
+        highlight = canvas.create_oval(self.x - r, self.y - r, self.x + r,
+                                            self.y + r, fill="red", outline="red")
+        canvas.after(timeout, canvas.delete, highlight)
+
 
 @dataclass
 class Line:
@@ -98,6 +104,10 @@ class Line:
     def transform(self, transform: np.ndarray):
         self.p1.transform(transform)
         self.p2.transform(transform)
+
+    def highlight(self, canvas: tk.Canvas, timeout: int = 200):
+        highlight = canvas.create_line(self.p1.x, self.p1.y, self.p2.x, self.p2.y, fill="red")
+        canvas.after(timeout, canvas.delete, highlight)
 
 
 @dataclass
@@ -126,6 +136,10 @@ class Polygon:
             point.transform(transform)
         for line in self.lines:
             line.transform(transform)
+
+    def highlight(self, canvas: tk.Canvas, timeout: int = 200):
+        highlight = canvas.create_polygon(self.points_list(), fill='', outline="red")
+        canvas.after(timeout, canvas.delete, highlight)
 
 
 class App(tk.Tk):
@@ -383,21 +397,8 @@ class App(tk.Tk):
         self.mode = Mode.SelectShape
         self.label2.config(text=f"Mode: {self.mode}")
 
-    def in_point(self, p: Point, x: int, y: int) -> bool:
+    def _in_point(self, p: Point, x: int, y: int) -> bool:
         return (x - p.x) ** 2 + (y - p.y) ** 2 <= self.R ** 2
-
-    def highlight_point(self, p: Point, timeout: int = 200, r: int = 5):
-        highlight = self.canvas.create_oval(p.x - r, p.y - r, p.x + r,
-                                            p.y + r, fill="red", outline="red")
-        self.canvas.after(timeout, self.canvas.delete, highlight)
-
-    def highlight_line(self, line: Line, timeout: int = 200):
-        highlight = self.canvas.create_line(line.p1.x, line.p1.y, line.p2.x, line.p2.y, fill="red")
-        self.canvas.after(timeout, self.canvas.delete, highlight)
-
-    def highlight_polygon(self, polygon: Polygon, timeout: int = 200):
-        highlight = self.canvas.create_polygon(polygon.points_list(), fill='', outline="red")
-        self.canvas.after(timeout, self.canvas.delete, highlight)
 
     def swap_shape_type(self, _):
         if self.mode == Mode.SelectShape:
@@ -425,19 +426,19 @@ class App(tk.Tk):
                     case ShapeType.Point:
                         for p in self.points:
                             if p.in_rect(self.rect_sel_p1, self.rect_sel_p2):
-                                self.highlight_point(p)
+                                p.highlight(self.canvas)
                                 self.selected_shape = p
                                 break
                     case ShapeType.Line:
                         for line in self.lines:
                             if line.in_rect(self.rect_sel_p1, self.rect_sel_p2):
-                                self.highlight_line(line)
+                                line.highlight(self.canvas)
                                 self.selected_shape = line
                                 break
                     case ShapeType.Polygon:
                         for polygon in self.polygons:
                             if polygon.in_rect(self.rect_sel_p1, self.rect_sel_p2):
-                                self.highlight_polygon(polygon)
+                                polygon.highlight(self.canvas)
                                 self.selected_shape = polygon
                                 break
                 self.rect_sel_p1 = None
@@ -445,7 +446,7 @@ class App(tk.Tk):
 
     def set_temp_point(self, event: tk.Event):
         self.tp = Point(event.x, event.y)
-        self.highlight_point(self.tp, timeout=1000)
+        self.tp.highlight(self.canvas, timeout=500)
 
     def del_temp_point(self, _: tk.Event):
         self.tp = None
@@ -459,9 +460,9 @@ class App(tk.Tk):
 
             case Mode.LineDraw:
                 for p in self.points:
-                    if self.in_point(p, event.x, event.y):
+                    if self._in_point(p, event.x, event.y):
                         self.line_buffer.append(p)
-                        self.highlight_point(p)
+                        p.highlight(self.canvas)
 
                 if len(self.line_buffer) == 2:
                     line = Line(self.line_buffer[0], self.line_buffer[1])
@@ -472,7 +473,7 @@ class App(tk.Tk):
             case Mode.PolygonDraw:
                 point = Point(event.x, event.y)
                 for p in self.points:
-                    if self.in_point(point, p.x, p.y):
+                    if self._in_point(point, p.x, p.y):
                         if len(self.polygon_buffer) > 0 and p == self.polygon_buffer[0]:
                             polygon = Polygon(self.polygon_buffer)
                             self.polygon_buffer = []
@@ -480,7 +481,7 @@ class App(tk.Tk):
                             self.polygons.append(polygon)
                         else:
                             self.polygon_buffer.append(p)
-                            self.highlight_point(p)
+                            p.highlight(self.canvas)
                         break
 
             case Mode.Rotate:
