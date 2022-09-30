@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from enum import Enum
 import numpy as np
 from math import radians, sin, cos
+from tkinter import simpledialog as sd
 
 
 class Mode(Enum):
@@ -143,6 +144,7 @@ class App(tk.Tk):
     _shape_type_idx: int = 1
     rect_sel_p1: Point
     rect_sel_p2: Point
+    tp: Point  # temporary point
 
     def __init__(self):
         super().__init__()
@@ -158,6 +160,7 @@ class App(tk.Tk):
         self.polygon_buffer = []
         self.rect_sel_p1 = None
         self.rect_sel_p2 = None
+        self.tp = None
 
         self.create_widgets()
         self.mainloop()
@@ -203,7 +206,8 @@ class App(tk.Tk):
 
         self.button9.pack(side="right", fill="x", padx=5)
         self.canvas.bind("<Button-1>", self.click)
-        self.bind("<Escape>", self.reset)
+        self.bind("<Escape>", self.del_temp_point)
+        self.bind("<Button-3>", self.set_temp_point)
         self.bind("<Return>", self.redraw)
         self.bind("<Delete>", self.clear_buffs)
         self.bind("<Button-2>", self.swap_shape_type)
@@ -227,6 +231,7 @@ class App(tk.Tk):
         print(f"Shape type idx: {self._shape_type_idx}")
         print(f"Rect sel p1: {self.rect_sel_p1}")
         print(f"Rect sel p2: {self.rect_sel_p2}")
+        print(f"Temp point: {self.tp}")
         print()
 
     def scroll(self, *args):
@@ -244,6 +249,7 @@ class App(tk.Tk):
         self.lines = []
         self.line_buffer = []
         self.polygon_buffer = []
+        self.tp = None
 
     def redraw(self, *_, delete_points=True):
         self.canvas.delete("all")
@@ -264,7 +270,10 @@ class App(tk.Tk):
         self.mode = Mode.Rotate
         self.label2.config(text=f"Mode: {self.mode}")
         if self.selected_shape is not None:
-            phi = radians(float(input("Angle (degrees): ")))
+            inp = sd.askfloat('Rotate', 'Angle (degrees): ')
+            if inp is None:
+                return
+            phi = radians(inp)
             mat = np.array([
                 [cos(phi), -sin(phi), 0],
                 [sin(phi), cos(phi), 0],
@@ -278,8 +287,10 @@ class App(tk.Tk):
         self.mode = Mode.Scale
         self.label2.config(text=f"Mode: {self.mode}")
         if self.selected_shape is not None:
-            sx = float(input("Scale x: "))
-            sy = float(input("Scale y: "))
+            inp = sd.askstring('Scale', 'Scale x, y:')
+            if inp is None:
+                return
+            sx, sy = map(float, inp.split(','))
             # possibly wrong matrix
             mat = np.array([
                 [sx, 0, 0],
@@ -294,8 +305,10 @@ class App(tk.Tk):
         self.mode = Mode.Shear
         self.label2.config(text=f"Mode: {self.mode}")
         if self.selected_shape is not None:
-            shx = float(input("Shear x: "))
-            shy = float(input("Shear y: "))
+            inp = sd.askstring('Shear', 'Shear x, y:')
+            if inp is None:
+                return
+            shx, shy = map(float, inp.split(','))
             # possibly wrong matrix
             mat = np.array([
                 [1, shx, 0],
@@ -310,8 +323,10 @@ class App(tk.Tk):
         self.mode = Mode.Translate
         self.label2.config(text=f"Mode: {self.mode}")
         if self.selected_shape is not None:
-            tx = float(input("Translate x: "))
-            ty = float(input("Translate y: "))
+            inp = sd.askstring('Translate', 'Translate x, y:')
+            if inp is None:
+                return
+            tx, ty = map(float, inp.split(','))
             mat = np.array([
                 [1, 0, tx],
                 [0, 1, ty],
@@ -427,6 +442,13 @@ class App(tk.Tk):
                                 break
                 self.rect_sel_p1 = None
                 self.rect_sel_p2 = None
+
+    def set_temp_point(self, event: tk.Event):
+        self.tp = Point(event.x, event.y)
+        self.highlight_point(self.tp, timeout=1000)
+
+    def del_temp_point(self, _: tk.Event):
+        self.tp = None
 
     def click(self, event: tk.Event):
         match self.mode:
