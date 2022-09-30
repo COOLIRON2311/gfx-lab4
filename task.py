@@ -70,6 +70,10 @@ class Point:
             return self.x == __o.x and self.y == __o.y
         return False
 
+    def __iter__(self):
+        yield self.x
+        yield self.y
+
     def in_rect(self, p1: 'Point', p2: 'Point') -> bool:
         maxx = max(p1.x, p2.x)
         minx = min(p1.x, p2.x)
@@ -85,8 +89,12 @@ class Point:
 
     def highlight(self, canvas: tk.Canvas, timeout: int = 200, r: int = 5):
         highlight = canvas.create_oval(self.x - r, self.y - r, self.x + r,
-                                            self.y + r, fill="red", outline="red")
+                                       self.y + r, fill="red", outline="red")
         canvas.after(timeout, canvas.delete, highlight)
+
+    @property
+    def center(self) -> 'Point':
+        return Point(self.x, self.y)
 
 
 @dataclass
@@ -108,6 +116,10 @@ class Line:
     def highlight(self, canvas: tk.Canvas, timeout: int = 200):
         highlight = canvas.create_line(self.p1.x, self.p1.y, self.p2.x, self.p2.y, fill="red")
         canvas.after(timeout, canvas.delete, highlight)
+
+    @property
+    def center(self) -> Point:
+        return Point((self.p1.x + self.p2.x) // 2, (self.p1.y + self.p2.y) // 2)
 
 
 @dataclass
@@ -140,6 +152,11 @@ class Polygon:
     def highlight(self, canvas: tk.Canvas, timeout: int = 200):
         highlight = canvas.create_polygon(self.points_list(), fill='', outline="red")
         canvas.after(timeout, canvas.delete, highlight)
+
+    @property
+    def center(self) -> Point:
+        return Point(sum(p.x for p in self.points) // len(self.points),
+                     sum(p.y for p in self.points) // len(self.points))
 
 
 class App(tk.Tk):
@@ -288,12 +305,32 @@ class App(tk.Tk):
             if inp is None:
                 return
             phi = radians(inp)
+            # https://scask.ru/a_book_mm3d.php?id=45
+            if self.tp is not None:
+                m, n = self.tp
+            else:
+                m, n = self.selected_shape.center
+            # m1 = np.array([
+            #     [1, 0, m],
+            #     [0, 1, n],
+            #     [0, 0, 1]
+            # ])
+            # r = np.array([
+                # [cos(phi), -sin(phi), 0],
+                # [sin(phi), cos(phi), 0],
+                # [0, 0, 1]
+            # ])
+            # m2 = np.array([
+            #     [1, 0, -m],
+            #     [0, 1, -n],
+            #     [0, 0, 1]
+            # ])
+            # self.selected_shape.transform(m1 @ r @ m2)
             mat = np.array([
-                [cos(phi), -sin(phi), 0],
-                [sin(phi), cos(phi), 0],
+                [cos(phi), -sin(phi), -m * cos(phi) + n * sin(phi) + m],
+                [sin(phi), cos(phi), -m * sin(phi) - n * cos(phi) + n],
                 [0, 0, 1]])
             self.selected_shape.transform(mat)
-            # TODO: relative to point
             self.redraw(delete_points=False)
             self.after(1, self.focus_force)
 
@@ -443,6 +480,7 @@ class App(tk.Tk):
                                 break
                 self.rect_sel_p1 = None
                 self.rect_sel_p2 = None
+                self.selected_shape.center.highlight(self.canvas, timeout=1000)
 
     def set_temp_point(self, event: tk.Event):
         self.tp = Point(event.x, event.y)
