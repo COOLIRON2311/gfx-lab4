@@ -1,3 +1,4 @@
+from re import S
 from time import sleep
 import tkinter as tk
 from dataclasses import dataclass
@@ -411,18 +412,88 @@ class App(tk.Tk):
             case SpecialFunctions.None_:
                 ...
             case SpecialFunctions.PointInConvexPoly:
-                ...
+                point = self.points[-1]
+                res = True
+                
+                for line in self.polygons[-1].lines:
+                    if self.on_left(line,point):
+                        res = False
+                        break                  
+                if res:
+                    print("Point is inside polygon")
+                else:
+                    print("Point IS NOT inside polygon")
             case SpecialFunctions.PointInNonConvexPoly:
-                ...
+                point = self.points[-1]
+                ray = Line(point,Point(self.W,point.y))
+                counter = 0
+                
+                for line in self.polygons[-1].lines:
+                    if self.are_intersected(line,ray):
+                        print(line)
+                        line.highlight(self.canvas,1000)
+                        counter+=1
+                        
+                if counter % 2 != 0:
+                    print("Point is inside polygon")
+                else:
+                    print("Point is NOT inside polygon")
+                    
             case SpecialFunctions.ClassifyPointPosition:
-                ...
+                if self.on_left(self.lines[-1],self.points[-1]):
+                    print("current point is on the left")
+                else:
+                    print("current point is on the right")
             case SpecialFunctions.RotateEdge90:
                 ...
             case SpecialFunctions.EdgeIntersect:
-                ...
+                if self.are_intersected(self.lines[-2],self.lines[-1]):
+                    print("Lines are intersected")
+                else:
+                    print("Lines are NOT intersected")
 
         self.mode = Mode.SelectShape
         self.label2.config(text=f"Mode: {self.mode}")
+
+    def on_left(self,line: Line, p: Point):
+        o = line.p1
+        a = line.p2
+        b = p
+
+        s_d = (o.y-b.y)*(a.x-o.x) - (b.x-o.x)*(o.y-a.y) 
+        
+        return s_d > 0    
+
+    def are_intersected(self, line1: Line, line2:Line):
+        
+        if ((line1.p1.x - line1.p2.x)*(line2.p1.y-line2.p2.y) - (line1.p1.y-line1.p2.y)*(line2.p1.x-line2.p2.x)) == 0:
+            return False
+        
+        t = ((line1.p1.x - line2.p1.x)*(line2.p1.y-line2.p2.y) - (line1.p1.y-line2.p1.y)*(line2.p1.x-line2.p2.x))/((line1.p1.x - line1.p2.x)*(line2.p1.y-line2.p2.y) - (line1.p1.y-line1.p2.y)*(line2.p1.x-line2.p2.x))
+        
+        point = Point(line1.p1.x+t*(line1.p2.x-line1.p1.x), line1.p1.y+t*(line1.p2.y-line1.p1.y))
+        
+        sx1 = [line1.p1.x,line1.p2.x]
+        sx1.sort()
+        lowx1 = sx1[0]
+        highx1 = sx1[-1]
+        
+        sy1 = [line1.p1.y,line1.p2.y]
+        sy1.sort()
+        lowy1 = sy1[0]
+        highy1 = sy1[-1]
+        
+        sx2 = [line2.p1.x,line2.p2.x]
+        sx2.sort()
+        lowx2 = sx2[0]
+        highx2 = sx2[-1]
+        
+        sy2 = [line2.p1.y,line2.p2.y]
+        sy2.sort()
+        lowy2 = sy2[0]
+        highy2 = sy2[-1]
+        
+        return point.x>=lowx1 and point.x<=highx1 and point.y>=lowy1 and point.y<=highy1 and point.x>=lowx2 and point.x<=highx2 and point.y>=lowy2 and point.y<=highy2
 
     def _in_point(self, p: Point, x: int, y: int) -> bool:
         return (x - p.x) ** 2 + (y - p.y) ** 2 <= self.R ** 2
