@@ -347,13 +347,17 @@ class App(tk.Tk):
             if inp is None:
                 return
             shx, shy = map(float, inp.split(','))
-            # possibly wrong matrix
+            if self.tp is not None:
+                m, n = self.tp
+            else:
+                m, n = self.selected_shape.center
             mat = np.array([
-                [1, shx, 0],
-                [shy, 1, 0],
+                [1, shx, -n * shx], # was -m * shx, but sympy gave me this
+                [shy, 1, -m * shy], # was -n * shy, but sympy gave me this
                 [0, 0, 1]])
+            # for some reason it shears too much
+            # TODO: fix this
             self.selected_shape.transform(mat)
-            # TODO: relative to point
             self.redraw(delete_points=False)
             self.after(1, self.focus_force)
 
@@ -465,9 +469,10 @@ class App(tk.Tk):
                                 polygon.highlight(self.canvas)
                                 self.selected_shape = polygon
                                 break
+                if self.selected_shape is not None:
+                    self.selected_shape.center.highlight(self.canvas, timeout=1000)
                 self.rect_sel_p1 = None
                 self.rect_sel_p2 = None
-                self.selected_shape.center.highlight(self.canvas, timeout=1000)
 
     def set_temp_point(self, event: tk.Event):
         self.tp = Point(event.x, event.y)
