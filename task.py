@@ -2,7 +2,7 @@ from time import sleep
 import tkinter as tk
 from dataclasses import dataclass
 from enum import Enum
-from math import cos, radians, sin
+from math import cos, radians, sin, tan
 from tkinter import simpledialog as sd
 import numpy as np
 
@@ -352,8 +352,8 @@ class App(tk.Tk):
             else:
                 m, n = self.selected_shape.center
             mat = np.array([
-                [1, shx, -n * shx], # was -m * shx, but sympy gave me this
-                [shy, 1, -m * shy], # was -n * shy, but sympy gave me this
+                [1, tan(shx), -n * shx], # was -m * shx, but sympy gave me this
+                [tan(shy), 1, -m * shy], # was -n * shy, but sympy gave me this
                 [0, 0, 1]])
             # for some reason it shears too much
             # TODO: fix this
