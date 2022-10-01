@@ -497,6 +497,8 @@ class App(tk.Tk):
                 if len(self.lines) < 2:
                     mb.showwarning("Error", "Not enough lines")
                     return
+                self.lines[-1].highlight(self.canvas, 500)
+                self.lines[-2].highlight(self.canvas, 500)
                 # if self.are_intersected(self.lines[-2], self.lines[-1]):
                 #     mb.showinfo("Result", "Lines are intersected")
                 # TODO: specify point of intersection
