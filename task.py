@@ -326,7 +326,6 @@ class App(tk.Tk):
             if inp is None:
                 return
             sx, sy = map(float, inp.split(','))
-            # possibly wrong matrix
             if self.tp is not None:
                 m, n = self.tp
             else:
@@ -343,23 +342,24 @@ class App(tk.Tk):
         self.mode = Mode.Shear
         self.label2.config(text=f"Mode: {self.mode}")
         if self.selected_shape is not None:
+            # print(self.selected_shape)
             inp = sd.askstring('Shear', 'Shear x, y:')
             if inp is None:
                 return
-            shx, shy = map(float, inp.split(','))
+            shx, shy = map(radians, map(float, inp.split(',')))
             if self.tp is not None:
                 m, n = self.tp
             else:
                 m, n = self.selected_shape.center
+            # used sympy to get this matrix
             mat = np.array([
-                [1, tan(shx), -n * shx], # was -m * shx, but sympy gave me this
-                [tan(shy), 1, -m * shy], # was -n * shy, but sympy gave me this
+                [1, tan(shx), -n * tan(shx)],
+                [tan(shy), 1, -m * tan(shy)],
                 [0, 0, 1]])
-            # for some reason it shears too much
-            # TODO: fix this
             self.selected_shape.transform(mat)
             self.redraw(delete_points=False)
             self.after(1, self.focus_force)
+            # print(self.selected_shape)
 
     def translate(self):
         self.mode = Mode.Translate
@@ -374,7 +374,6 @@ class App(tk.Tk):
                 [0, 1, ty],
                 [0, 0, 1]])
             self.selected_shape.transform(mat)
-            # TODO: relative to point
             self.redraw(delete_points=False)
             self.after(1, self.focus_force)
 
@@ -469,8 +468,8 @@ class App(tk.Tk):
                                 polygon.highlight(self.canvas)
                                 self.selected_shape = polygon
                                 break
-                if self.selected_shape is not None:
-                    self.selected_shape.center.highlight(self.canvas, timeout=1000)
+                # if self.selected_shape is not None:
+                    # self.selected_shape.center.highlight(self.canvas, timeout=1000)
                 self.rect_sel_p1 = None
                 self.rect_sel_p2 = None
 
