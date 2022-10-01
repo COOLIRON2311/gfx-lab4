@@ -85,8 +85,8 @@ class Point:
     def transform(self, transform: np.ndarray):
         p = np.array([self.x, self.y, 1])
         p = np.matmul(transform, p)
-        self.x = p[0]
-        self.y = p[1]
+        self.x = int(p[0])
+        self.y = int(p[1])
 
     def highlight(self, canvas: tk.Canvas, timeout: int = 200, r: int = 5):
         highlight = canvas.create_oval(self.x - r, self.y - r, self.x + r,
@@ -122,6 +122,21 @@ class Line:
     def center(self) -> Point:
         return Point((self.p1.x + self.p2.x) // 2, (self.p1.y + self.p2.y) // 2)
 
+    def get_x(self, y: int) -> int:
+        """Получить x для точки с заданным y"""
+        if self.p1.x == self.p2.x:
+            return self.p1.x
+        return int((y - self.p1.y) * (self.p2.x - self.p1.x) / (self.p2.y - self.p1.y) + self.p1.x)
+
+    def intersection(self, line: 'Line') -> Point | None:
+        y1 = min(self.p1.y, self.p2.y)
+        y2 = max(self.p1.y, self.p2.y)
+        for y in range(y1, y2 + 1):
+            x1 = self.get_x(y)
+            x2 = line.get_x(y)
+            if abs(x1 - x2) <= 1:
+                return Point(x1, y)
+        return None
 
 @dataclass
 class Polygon:
@@ -482,9 +497,12 @@ class App(tk.Tk):
                 if len(self.lines) < 2:
                     mb.showwarning("Error", "Not enough lines")
                     return
-
-                if self.are_intersected(self.lines[-2], self.lines[-1]):
-                    mb.showinfo("Result", "Lines are intersected")
+                # if self.are_intersected(self.lines[-2], self.lines[-1]):
+                #     mb.showinfo("Result", "Lines are intersected")
+                # TODO: specify point of intersection
+                r = self.lines[-1].intersection(self.lines[-2])
+                if r:
+                    mb.showinfo("Result", f"Lines intersect at {r}")
                 else:
                     mb.showinfo("Result", "Lines are NOT intersected")
 
