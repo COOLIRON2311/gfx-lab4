@@ -327,12 +327,15 @@ class App(tk.Tk):
                 return
             sx, sy = map(float, inp.split(','))
             # possibly wrong matrix
+            if self.tp is not None:
+                m, n = self.tp
+            else:
+                m, n = self.selected_shape.center
             mat = np.array([
-                [sx, 0, 0],
-                [0, sy, 0],
+                [sx, 0, -m * sx + m],
+                [0, sy, -n * sy + n],
                 [0, 0, 1]])
             self.selected_shape.transform(mat)
-            # TODO: relative to point
             self.redraw(delete_points=False)
             self.after(1, self.focus_force)
 
