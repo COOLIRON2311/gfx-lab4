@@ -1,10 +1,10 @@
-from re import S
-from time import sleep
 import tkinter as tk
 from dataclasses import dataclass
 from enum import Enum
 from math import cos, radians, sin, tan
+from tkinter import messagebox as mb
 from tkinter import simpledialog as sd
+
 import numpy as np
 
 
@@ -415,14 +415,14 @@ class App(tk.Tk):
             case SpecialFunctions.PointInConvexPoly:
                 point = self.tp
                 if point is None:
-                    print("No point selected")
+                    mb.showwarning("Error", "No point selected")
                     return
 
                 res = True
 
                 shape = self.selected_shape
                 if shape is None or not isinstance(shape, Polygon):
-                    print("No polygon selected")
+                    mb.showwarning("Error", "No polygon selected")
                     return
 
                 for line in shape.lines:
@@ -430,14 +430,14 @@ class App(tk.Tk):
                         res = False
                         break
                 if res:
-                    print("Point is inside polygon")
+                    mb.showinfo("Result", "Point is inside polygon")
                 else:
-                    print("Point IS NOT inside polygon")
+                    mb.showinfo("Result", "Point is NOT inside polygon")
 
             case SpecialFunctions.PointInNonConvexPoly:
                 point = self.tp
                 if point is None:
-                    print("No point selected")
+                    mb.showwarning("Error", "No point selected")
                     return
 
                 ray = Line(point, Point(self.W, point.y))
@@ -445,7 +445,7 @@ class App(tk.Tk):
 
                 shape = self.selected_shape
                 if shape is None or not isinstance(shape, Polygon):
-                    print("No polygon selected")
+                    mb.showwarning("Error", "No polygon selected")
                     return
 
                 for line in shape.lines:
@@ -455,38 +455,38 @@ class App(tk.Tk):
                         counter += 1
 
                 if counter % 2 != 0:
-                    print("Point is inside polygon")
+                    mb.showinfo("Result", "Point is inside polygon")
                 else:
-                    print("Point is NOT inside polygon")
+                    mb.showinfo("Result", "Point is NOT inside polygon")
 
             case SpecialFunctions.ClassifyPointPosition:
                 point = self.tp
                 if point is None:
-                    print("No point selected")
+                    mb.showwarning("Error", "No point selected")
                     return
 
                 shape = self.selected_shape
                 if shape is None or not isinstance(shape, Line):
-                    print("No edge selected")
+                    mb.showwarning("Error", "No line selected")
                     return
 
                 if self.on_left(shape, point):
-                    print("Current point is on the left")
+                    mb.showinfo("Result", "Point is on the left side of the line")
                 else:
-                    print("Current point is on the right")
+                    mb.showinfo("Result", "Point is on the right side of the line")
 
             case SpecialFunctions.RotateEdge90:
                 ...
 
             case SpecialFunctions.EdgeIntersect:
                 if len(self.lines) < 2:
-                    print("Not enough edges")
+                    mb.showwarning("Error", "Not enough lines")
                     return
 
                 if self.are_intersected(self.lines[-2], self.lines[-1]):
-                    print("Lines are intersected")
+                    mb.showinfo("Result", "Lines are intersected")
                 else:
-                    print("Lines are NOT intersected")
+                    mb.showinfo("Result", "Lines are NOT intersected")
 
         self.mode = Mode.SelectShape
         self.label2.config(text=f"Mode: {self.mode}")
