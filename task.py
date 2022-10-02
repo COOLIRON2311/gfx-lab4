@@ -1,3 +1,4 @@
+from asyncio.windows_events import NULL
 import tkinter as tk
 from dataclasses import dataclass
 from enum import Enum
@@ -491,7 +492,23 @@ class App(tk.Tk):
                     mb.showinfo("Result", "Point is on the right side of the line")
 
             case SpecialFunctions.RotateEdge90:
-                ...
+                center = self.lines[-1].center
+                phi = radians(90)
+                mat = np.array([
+                [cos(phi), -sin(phi), -center.x * cos(phi) + center.y * sin(phi) + center.x],
+                [sin(phi), cos(phi), -center.x * sin(phi) - center.y * cos(phi) + center.y],
+                [0, 0, 1]])
+                
+                p1 = self.lines[-1].p1
+                p2 = self.lines[-1].p2               
+                
+                l1 = Line(p1,center)
+                l2 = Line(center,p2)
+                l1.transform(mat)
+                l2.transform(mat)
+                
+                self.redraw(delete_points=False)
+                self.after(1, self.focus_force)
 
             case SpecialFunctions.EdgeIntersect:
                 if len(self.lines) < 2:
