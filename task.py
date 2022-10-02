@@ -1,4 +1,3 @@
-from asyncio.windows_events import NULL
 import tkinter as tk
 from dataclasses import dataclass
 from enum import Enum
@@ -123,21 +122,6 @@ class Line:
     def center(self) -> Point:
         return Point((self.p1.x + self.p2.x) // 2, (self.p1.y + self.p2.y) // 2)
 
-    def get_x(self, y: int) -> int:
-        """Получить x для точки с заданным y"""
-        if self.p1.x == self.p2.x:
-            return self.p1.x
-        return int((y - self.p1.y) * (self.p2.x - self.p1.x) / (self.p2.y - self.p1.y) + self.p1.x)
-
-    def intersection(self, line: 'Line') -> Point | None:
-        y1 = min(self.p1.y, self.p2.y)
-        y2 = max(self.p1.y, self.p2.y)
-        for y in range(y1, y2 + 1):
-            x1 = self.get_x(y)
-            x2 = line.get_x(y)
-            if abs(x1 - x2) <= 1:
-                return Point(x1, y)
-        return None
 
 @dataclass
 class Polygon:
@@ -359,7 +343,6 @@ class App(tk.Tk):
         self.mode = Mode.Shear
         self.label2.config(text=f"Mode: {self.mode}")
         if self.selected_shape is not None:
-            # print(self.selected_shape)
             inp = sd.askstring('Shear', 'Shear x, y:')
             if inp is None:
                 return
@@ -376,7 +359,6 @@ class App(tk.Tk):
             self.selected_shape.transform(mat)
             self.redraw(delete_points=False)
             self.after(1, self.focus_force)
-            # print(self.selected_shape)
 
     def translate(self):
         self.mode = Mode.Translate
@@ -492,21 +474,25 @@ class App(tk.Tk):
                     mb.showinfo("Result", "Point is on the right side of the line")
 
             case SpecialFunctions.RotateEdge90:
-                center = self.lines[-1].center
+                shape = self.selected_shape
+                if shape is None or not isinstance(shape, Line):
+                    mb.showwarning("Error", "No line selected")
+                    return
+                c = shape.center
                 phi = radians(90)
                 mat = np.array([
-                [cos(phi), -sin(phi), -center.x * cos(phi) + center.y * sin(phi) + center.x],
-                [sin(phi), cos(phi), -center.x * sin(phi) - center.y * cos(phi) + center.y],
-                [0, 0, 1]])
-                
-                p1 = self.lines[-1].p1
-                p2 = self.lines[-1].p2               
-                
-                l1 = Line(p1,center)
-                l2 = Line(center,p2)
+                    [cos(phi), -sin(phi), -c.x * cos(phi) + c.y * sin(phi) + c.x],
+                    [sin(phi), cos(phi), -c.x * sin(phi) - c.y * cos(phi) + c.y],
+                    [0, 0, 1]])
+
+                p1 = shape.p1
+                p2 = shape.p2
+
+                l1 = Line(p1, c)
+                l2 = Line(c, p2)
                 l1.transform(mat)
                 l2.transform(mat)
-                
+
                 self.redraw(delete_points=False)
                 self.after(1, self.focus_force)
 
@@ -516,12 +502,10 @@ class App(tk.Tk):
                     return
                 self.lines[-1].highlight(self.canvas, 500)
                 self.lines[-2].highlight(self.canvas, 500)
-                # if self.are_intersected(self.lines[-2], self.lines[-1]):
-                #     mb.showinfo("Result", "Lines are intersected")
-                # TODO: specify point of intersection
-                r = self.lines[-1].intersection(self.lines[-2])
-                if r:
-                    mb.showinfo("Result", f"Lines intersect at {r}")
+                res = self.are_intersected(self.lines[-2], self.lines[-1])
+                if res:
+                    res.highlight(self.canvas, 1000)
+                    mb.showinfo("Result", f"Lines intersect at {res}")
                 else:
                     mb.showinfo("Result", "Lines are NOT intersected")
 
@@ -537,37 +521,24 @@ class App(tk.Tk):
 
         return s_d > 0
 
-    def are_intersected(self, line1: Line, line2: Line):
+    def are_intersected(self, l1: Line, l2: Line) -> Point | None:
 
-        if ((line1.p1.x - line1.p2.x)*(line2.p1.y-line2.p2.y) - (line1.p1.y-line1.p2.y)*(line2.p1.x-line2.p2.x)) == 0:
-            return False
+        if ((l1.p1.x - l1.p2.x)*(l2.p1.y-l2.p2.y) - (l1.p1.y-l1.p2.y)*(l2.p1.x-l2.p2.x)) == 0:
+            return None
 
-        t = ((line1.p1.x - line2.p1.x)*(line2.p1.y-line2.p2.y) - (line1.p1.y-line2.p1.y)*(line2.p1.x-line2.p2.x)) / \
-            ((line1.p1.x - line1.p2.x)*(line2.p1.y-line2.p2.y) - (line1.p1.y-line1.p2.y)*(line2.p1.x-line2.p2.x))
+        t = ((l1.p1.x - l2.p1.x)*(l2.p1.y-l2.p2.y) - (l1.p1.y-l2.p1.y)*(l2.p1.x-l2.p2.x)) / \
+            ((l1.p1.x - l1.p2.x)*(l2.p1.y-l2.p2.y) - (l1.p1.y-l1.p2.y)*(l2.p1.x-l2.p2.x))
 
-        point = Point(line1.p1.x+t*(line1.p2.x-line1.p1.x), line1.p1.y+t*(line1.p2.y-line1.p1.y))
+        point = Point(int(l1.p1.x+t*(l1.p2.x-l1.p1.x)), int(l1.p1.y+t*(l1.p2.y-l1.p1.y)))
 
-        sx1 = [line1.p1.x, line1.p2.x]
-        sx1.sort()
-        lowx1 = sx1[0]
-        highx1 = sx1[-1]
+        lowx1, highx1 = sorted([l1.p1.x, l1.p2.x])
+        lowy1, highy1 = sorted([l1.p1.y, l1.p2.y])
+        lowx2, highx2 = sorted([l2.p1.x, l2.p2.x])
+        lowy2, highy2 = sorted([l2.p1.y, l2.p2.y])
 
-        sy1 = [line1.p1.y, line1.p2.y]
-        sy1.sort()
-        lowy1 = sy1[0]
-        highy1 = sy1[-1]
-
-        sx2 = [line2.p1.x, line2.p2.x]
-        sx2.sort()
-        lowx2 = sx2[0]
-        highx2 = sx2[-1]
-
-        sy2 = [line2.p1.y, line2.p2.y]
-        sy2.sort()
-        lowy2 = sy2[0]
-        highy2 = sy2[-1]
-
-        return point.x >= lowx1 and point.x <= highx1 and point.y >= lowy1 and point.y <= highy1 and point.x >= lowx2 and point.x <= highx2 and point.y >= lowy2 and point.y <= highy2
+        if lowx1 <= point.x <= highx1 and lowy1 <= point.y <= highy1 and lowx2 <= point.x <= highx2 and lowy2 <= point.y <= highy2:
+            return point
+        return None
 
     def _in_point(self, p: Point, x: int, y: int) -> bool:
         return (x - p.x) ** 2 + (y - p.y) ** 2 <= self.R ** 2
