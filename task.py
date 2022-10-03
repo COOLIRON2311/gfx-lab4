@@ -282,6 +282,8 @@ class App(tk.Tk):
         self.line_buffer = []
         self.polygon_buffer = []
         self.tp = None
+        self.rect_sel_p1 = None
+        self.rect_sel_p2 = None
 
     def redraw(self, *_, delete_points=True):
         self.canvas.delete("all")
