@@ -523,11 +523,11 @@ class App(tk.Tk):
 
     def are_intersected(self, l1: Line, l2: Line) -> Point | None:
 
-        if ((l1.p1.x - l1.p2.x)*(l2.p1.y-l2.p2.y) - (l1.p1.y-l1.p2.y)*(l2.p1.x-l2.p2.x)) == 0:
+        denum = (l1.p1.x - l1.p2.x)*(l2.p1.y-l2.p2.y) - (l1.p1.y-l1.p2.y)*(l2.p1.x-l2.p2.x)
+        if denum == 0:
             return None
 
-        t = ((l1.p1.x - l2.p1.x)*(l2.p1.y-l2.p2.y) - (l1.p1.y-l2.p1.y)*(l2.p1.x-l2.p2.x)) / \
-            ((l1.p1.x - l1.p2.x)*(l2.p1.y-l2.p2.y) - (l1.p1.y-l1.p2.y)*(l2.p1.x-l2.p2.x))
+        t = ((l1.p1.x - l2.p1.x)*(l2.p1.y-l2.p2.y) - (l1.p1.y-l2.p1.y)*(l2.p1.x-l2.p2.x)) / denum
 
         point = Point(int(l1.p1.x+t*(l1.p2.x-l1.p1.x)), int(l1.p1.y+t*(l1.p2.y-l1.p1.y)))
 
