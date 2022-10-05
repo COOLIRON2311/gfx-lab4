@@ -59,8 +59,8 @@ class SpecialFunctions(Enum):
 
 @dataclass
 class Point:
-    x: int
-    y: int
+    x: float
+    y: float
 
     def draw(self, canvas: tk.Canvas, color: str = "black", radius: int = 5):
         canvas.create_oval(self.x - radius, self.y - radius, self.x + radius,
@@ -85,8 +85,8 @@ class Point:
     def transform(self, transform: np.ndarray):
         p = np.array([self.x, self.y, 1])
         p = np.dot(transform, p)
-        self.x = int(p[0])
-        self.y = int(p[1])
+        self.x = p[0]
+        self.y = p[1]
 
     def highlight(self, canvas: tk.Canvas, timeout: int = 200, r: int = 5):
         highlight = canvas.create_oval(self.x - r, self.y - r, self.x + r,
@@ -120,7 +120,7 @@ class Line:
 
     @property
     def center(self) -> Point:
-        return Point((self.p1.x + self.p2.x) // 2, (self.p1.y + self.p2.y) // 2)
+        return Point((self.p1.x + self.p2.x) / 2, (self.p1.y + self.p2.y) / 2)
 
 
 @dataclass
@@ -156,8 +156,8 @@ class Polygon:
 
     @property
     def center(self) -> Point:
-        return Point(sum(p.x for p in self.points) // len(self.points),
-                     sum(p.y for p in self.points) // len(self.points))
+        return Point(sum(p.x for p in self.points) / len(self.points),
+                     sum(p.y for p in self.points) / len(self.points))
 
 
 class App(tk.Tk):
@@ -531,7 +531,7 @@ class App(tk.Tk):
 
         t = ((l1.p1.x - l2.p1.x)*(l2.p1.y-l2.p2.y) - (l1.p1.y-l2.p1.y)*(l2.p1.x-l2.p2.x)) / denum
 
-        point = Point(int(l1.p1.x+t*(l1.p2.x-l1.p1.x)), int(l1.p1.y+t*(l1.p2.y-l1.p1.y)))
+        point = Point(l1.p1.x+t*(l1.p2.x-l1.p1.x), l1.p1.y+t*(l1.p2.y-l1.p1.y))
 
         lowx1, highx1 = sorted([l1.p1.x, l1.p2.x])
         lowy1, highy1 = sorted([l1.p1.y, l1.p2.y])
@@ -588,8 +588,8 @@ class App(tk.Tk):
                                 break
                 # if self.selected_shape is not None:
                     # self.selected_shape.center.highlight(self.canvas, timeout=1000)
-                self.rect_sel_p1 = None
-                self.rect_sel_p2 = None
+            self.rect_sel_p1 = None
+            self.rect_sel_p2 = None
 
     def set_temp_point(self, event: tk.Event):
         self.tp = Point(event.x, event.y)
