@@ -84,7 +84,7 @@ class Point:
 
     def transform(self, transform: np.ndarray):
         p = np.array([self.x, self.y, 1])
-        p = np.matmul(transform, p)
+        p = np.dot(transform, p)
         self.x = int(p[0])
         self.y = int(p[1])
 
