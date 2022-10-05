@@ -147,8 +147,8 @@ class Polygon:
     def transform(self, transform: np.ndarray):
         for point in self.points:
             point.transform(transform)
-        for line in self.lines:
-            line.transform(transform)
+        # for line in self.lines:
+        #     line.transform(transform)
 
     def highlight(self, canvas: tk.Canvas, timeout: int = 200):
         highlight = canvas.create_polygon(self.points_list(), fill='', outline="red")
